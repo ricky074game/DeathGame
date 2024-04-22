@@ -57,7 +57,7 @@ def player_control():
     if len(event_list) == 0:
         accelerationx = 0
         if(touch):
-            velocityx /= 1.05
+            velocityx /= 1.0
     touch = False
     #Gravity and collision!
     velocityy += accelerationy
@@ -72,14 +72,17 @@ def player_control():
             touch = True
              #If the player touch the last platform, reset the platforms except the last one, and generate a new one leftwards
             if plat == platforms[-1]:
-                for i in range(5):
-                    platforms.pop(0)
+                if(platforms.index(plat) == 4):
+                    for i in range(4):
+                        platforms.pop(0)
+                    if(right):
+                        right = False
+                    else:
+                        right = True
                 if(right):
-                    generate_platforms(False)
-                    right = False
-                else:
                     generate_platforms(True)
-                    right = True
+                else:
+                    generate_platforms(False)
        
         
     #Check "death"
@@ -96,24 +99,22 @@ def generate_platforms(right):
     lastx = 0
     lasty = 0
     if(right):
-        for i in range(5):
-            lastx = platforms[i].get_coords()[0]
-            lasty = platforms[i].get_coords()[1]
-            randomx = random.randint(100, 400)
-            randomy = random.randint(-100, 100)
-            if(lasty - randomy < 0):
-                randomy = 0
-            platforms.append(platform(lastx + randomx, lasty + randomy, 100, 20))
+        lastx = platforms[-1].get_coords()[0]
+        lasty = platforms[-1].get_coords()[1]
+        randomx = random.randint(100, 400)
+        randomy = random.randint(-100, 100)
+        if(lasty + randomy > 600):
+            randomy = 0
+        platforms.append(platform(lastx + randomx, lasty + randomy, 100, 20))
         return
     else:
-        for i in range (5):
-            lastx = platforms[i].get_coords()[0]
-            lasty = platforms[i].get_coords()[1]
-            randomx = random.randint(100, 400)
-            randomy = random.randint(-100, 100)
-            if(lasty - randomy < 0):
-                randomy = 0
-            platforms.append(platform(lastx - randomx, lasty + randomy, 100, 20))
+        lastx = platforms[-1].get_coords()[0]
+        lasty = platforms[-1].get_coords()[1]
+        randomx = random.randint(100, 400)
+        randomy = random.randint(-100, 100)
+        if(lasty + randomy > 600):
+            randomy = 0
+        platforms.append(platform(lastx - randomx, lasty + randomy, 100, 20))
         return
         
 
