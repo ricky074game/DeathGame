@@ -1,30 +1,38 @@
 import random
 import pygame
-import platform
+import win32gui
+from pygame._sdl2 import Window, Texture, Image, Renderer, get_drivers, messagebox
 
-screen = pygame.display.set_mode((1920, 600))
+screen = pygame.display.set_mode((600, 600))
 pygame.display.set_caption("Platformer")
 platforms = []
 fps = 60
 
-playerx = 400
-playery = 400
+playerx = 100
+playery = 100
 accelerationy = 0.5
 velocityy = 0
 accelerationx = 0
 velocityx = 0
 touch = False
 right = True
+num_plat = 0
+num_plif = 0
 
 class platform:
-    def __init__(self, x, y, width, height):
+    def __init__(self, x, y, width, height, window):
         self.x = x
         self.y = y
         self.width = width
         self.height = height
-
-    def draw(self, screen):
-        pygame.draw.rect(screen, (255, 255, 255), (self.x, self.y, self.width, self.height))
+        self.window = window
+        renderer = Renderer(self.window)
+        renderer.clear()
+        renderer.draw_color = (0, 0, 0, 255)
+        renderer.draw_rect((50, 50, self.width, self.height))
+        renderer.present()
+        platform_window = win32gui.FindWindow(None, "Platform #" + str(num_plif))
+        win32gui.MoveWindow(platform_window, self.x + 50, self.y + 50, 100, 100, True)
 
     def move(self, dx, dy):
         self.x += dx
@@ -35,10 +43,19 @@ class platform:
 
     def get_coords(self):
         return (self.x, self.y)
-platforms.append(platform(0, 500, 100, 20))
+    def get_window(self):
+        return self.window
+    def destroy(self):
+        self.window.destroy()
+
+platform_window = Window("Platform" + str(num_plif), size=(200, 200), always_on_top=True)
+num_plif += 1
+platforms.append(platform(0, 500, 100, 20, window=platform_window))
+
+hwnd = win32gui.FindWindow(None, "Platformer") 
 
 def player_control():
-    global velocityx, playerx, accelerationx, velocityy, playery, accelerationy,touch, right
+    global velocityx, playerx, accelerationx, velocityy, playery, accelerationy,touch, right, num_plat, num_plif 
     keys = pygame.key.get_pressed()
     if keys[pygame.K_a]:
         accelerationx = -0.15
@@ -70,19 +87,21 @@ def player_control():
             velocityy = 0
             playery = plat.y - 20
             touch = True
-             #If the player touch the last platform, reset the platforms except the last one, and generate a new one leftwards
+            #If the player touch the last platform, reset the platforms except the last one, and generate a new one leftwards
             if plat == platforms[-1]:
-                if(platforms.index(plat) == 4):
-                    for i in range(4):
-                        platforms.pop(0)
+                if(num_plat > 4):
                     if(right):
                         right = False
                     else:
                         right = True
                 if(right):
                     generate_platforms(True)
+                    platforms.pop(0)
+                    num_plat += 1
                 else:
                     generate_platforms(False)
+                    platforms.pop(0)
+                    num_plat += 1
        
         
     #Check "death"
@@ -95,7 +114,7 @@ def player_control():
         touch = False
 
 def generate_platforms(right):
-    global platforms
+    global platforms, num_plif
     lastx = 0
     lasty = 0
     if(right):
@@ -105,7 +124,9 @@ def generate_platforms(right):
         randomy = random.randint(-100, 100)
         if(lasty + randomy > 600):
             randomy = 0
-        platforms.append(platform(lastx + randomx, lasty + randomy, 100, 20))
+        platform_window = Window("Platform #" + str(num_plif), size=(200, 200), always_on_top=True)
+        platforms.append(platform(lastx + randomx, lasty + randomy, 100, 20, window=platform_window))
+        num_plif += 1
         return
     else:
         lastx = platforms[-1].get_coords()[0]
@@ -114,10 +135,12 @@ def generate_platforms(right):
         randomy = random.randint(-100, 100)
         if(lasty + randomy > 600):
             randomy = 0
-        platforms.append(platform(lastx - randomx, lasty + randomy, 100, 20))
+        platform_window = Window("Platform #" + str(num_plif), size=(200, 200), always_on_top=True)
+        platforms.append(platform(lastx + randomx, lasty + randomy, 100, 20, window=platform_window))
+        num_plif += 1
         return
-        
 
+                
 
 generate_platforms(True)
 while True:
@@ -125,10 +148,17 @@ while True:
         if event.type == pygame.QUIT:
             pygame.quit()
             quit()
+        for plat in platforms:
+            if getattr(event, 'window', None) == plat.get_window():
+                if(
+                    event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE or event.type == pygame.WINDOWCLOSE
+                ):
+                    plat.destroy()
+                    platforms.remove(plat)
     screen.fill((0, 0, 0))
-    for plat in platforms:
-        plat.draw(screen)
     player_control()
-    pygame.draw.circle(screen, (255, 0, 0), (playerx, playery), 20)
+    pygame.draw.circle(screen, (255, 0, 0), (300, 300), 20)
     pygame.display.flip()
+    hwnd = win32gui.FindWindow(None, "Platformer")
+    win32gui.MoveWindow(hwnd, int(playerx - 150), int(playery - 150), 300, 300, True)
     pygame.time.Clock().tick(fps)
